@@ -15,6 +15,7 @@ import {
   FileImage,
   FileText,
   Gauge,
+  ImageIcon,
   Link2,
   LoaderCircle,
   LockKeyhole,
@@ -31,6 +32,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { normalizeResumeTextForEditing } from './resume-text';
 
 const SAMPLE_RESUME = `林晓雨｜产品经理
 138-0000-0000｜xiaoyu.lin@example.com｜上海
@@ -39,13 +41,12 @@ const SAMPLE_RESUME = `林晓雨｜产品经理
 同济大学 管理科学与工程 硕士 2022.09—2025.06
 核心课程：数据分析、用户研究、运营管理
 
-实习经历
+实习经历（项目经历）
 某头部内容平台｜商业产品实习生 2024.03—2024.09
 • 负责创作者增长产品需求分析，跟进产品迭代和项目上线。
 • 通过用户访谈和数据分析定位内容发布流程问题，协同研发优化功能。
 • 参与商业化策略研究，输出行业竞品分析报告。
 
-项目经历
 AI 求职助手｜发起人 / 产品负责人 2024.10—至今
 • 设计简历诊断和岗位匹配功能，完成从需求分析到原型设计。
 • 自学大模型 Prompt Engineering，搭建可交互 Demo。
@@ -205,7 +206,9 @@ function FileCard({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isResume = kind === 'resume';
-  const accept = isResume ? '.pdf,application/pdf' : '.png,.jpg,.jpeg,.webp,image/*';
+  const accept = isResume
+    ? '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    : '.png,.jpg,.jpeg,.webp,image/*';
   const Icon = isResume ? FileText : FileImage;
   const active = Boolean(file);
 
@@ -225,10 +228,10 @@ function FileCard({
         <button onClick={() => inputRef.current?.click()} className="flex h-full min-h-[218px] w-full flex-col text-left focus:outline-none">
           <div className="mb-auto flex w-full items-start justify-between">
             <span className={`grid h-12 w-12 place-items-center rounded-2xl ${isResume ? 'bg-[#e4ebdf] text-[#315542]' : 'bg-white/10 text-[#d9f28d]'}`}><UploadCloud size={23} /></span>
-            <span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${isResume ? 'border-[#d7dbd3] text-[#707972]' : 'border-white/15 text-white/60'}`}>{isResume ? 'PDF · 最大 10MB' : 'PNG · JPG · WEBP'}</span>
+            <span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${isResume ? 'border-[#d7dbd3] text-[#707972]' : 'border-white/15 text-white/60'}`}>{isResume ? 'PDF · DOCX · 最大 10MB' : 'PNG · JPG · WEBP'}</span>
           </div>
-          <h2 className="mb-2 mt-10 text-2xl font-black tracking-[-0.035em]">{isResume ? '上传 PDF 简历' : '上传岗位 JD 图片'}</h2>
-          <p className={`text-sm leading-6 ${isResume ? 'text-[#6c756f]' : 'text-white/60'}`}>{isResume ? '拖入文件，自动识别文本、章节与原始版式' : '识别岗位职责、硬性门槛与高权重关键词'}</p>
+          <h2 className="mb-2 mt-10 text-2xl font-black tracking-[-0.035em]">{isResume ? '上传 PDF / Word 简历' : '上传岗位 JD 图片'}</h2>
+          <p className={`text-sm leading-6 ${isResume ? 'text-[#6c756f]' : 'text-white/60'}`}>{isResume ? '拖入 PDF 或 DOCX 文件，自动提取文字与章节' : '识别岗位职责、硬性门槛与高权重关键词'}</p>
         </button>
       ) : (
         <div className="flex min-h-[218px] flex-col">
@@ -445,7 +448,7 @@ function DiffCard({ before, after, label }: { before: string; after: string; lab
   );
 }
 
-function ExportPhase({ optimizedText, setOptimizedText, portfolioLink, setPortfolioLink, onBack, onDownload, downloading }: { optimizedText: string; setOptimizedText: (value: string) => void; portfolioLink: string; setPortfolioLink: (value: string) => void; onBack: () => void; onDownload: () => void; downloading: boolean }) {
+function ExportPhase({ optimizedText, setOptimizedText, portfolioLink, setPortfolioLink, photoFile, setPhotoFile, onBack, onDownload, downloading }: { optimizedText: string; setOptimizedText: (value: string) => void; portfolioLink: string; setPortfolioLink: (value: string) => void; photoFile: File | null; setPhotoFile: (value: File | null) => void; onBack: () => void; onDownload: () => void; downloading: boolean }) {
   return (
     <section className="animate-rise">
       <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -479,8 +482,26 @@ function ExportPhase({ optimizedText, setOptimizedText, portfolioLink, setPortfo
 
           <DiffCard label="STAR 改写示例" before="负责创作者增长需求分析，跟进项目上线。" after="拆解 6 个关键漏斗环节并推动 2 项功能上线，发布完成率提升 18%。" />
 
+          <article className="overflow-hidden rounded-[22px] border border-[#ced5dd] bg-white">
+            <div className="border-t-[7px] border-[#879cb5] px-5 pb-5 pt-4">
+              <div className="flex items-start justify-between gap-3">
+                <div><p className="text-[9px] font-black tracking-[0.15em] text-[#7d8792]">REFERENCE TEMPLATE</p><h2 className="mt-1.5 font-black text-[#536a83]">蓝灰 · 参考同款版</h2></div>
+                <span className="rounded-full bg-[#e8edf2] px-2.5 py-1 text-[9px] font-black text-[#60758c]">已启用</span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-[#68737e]">按参考简历重建蓝灰页眉、信息带和分区条，新增“实习经历（项目经历）”，同时保留 ATS 阅读顺序。</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {['A4 版式', '参考同款', 'ATS 友好', 'Word 可编辑'].map((item) => <span key={item} className="rounded-md border border-[#d8dee5] bg-[#f5f7f9] px-2 py-1 text-[9px] font-bold text-[#667687]">{item}</span>)}
+              </div>
+              <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#b9c5d0] bg-[#f4f6f8] px-3 py-3 text-xs text-[#657484] transition hover:border-[#879cb5] hover:bg-[#eef2f5]">
+                <input type="file" accept="image/png,image/jpeg,image/gif,image/bmp" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#879cb5] text-white"><ImageIcon size={15} /></span>
+                <span className="min-w-0"><strong className="block truncate text-[#4f6173]">{photoFile?.name ?? '上传证件照（可选）'}</strong><span className="mt-0.5 block text-[9px] text-[#87919b]">未上传时保留“证件照”占位框</span></span>
+              </label>
+            </div>
+          </article>
+
           <button onClick={onDownload} disabled={downloading} className="download-button">
-            {downloading ? <LoaderCircle size={18} className="animate-spin" /> : <Download size={18} />} {downloading ? '正在生成 Word…' : '导出 Word 简历'}
+            {downloading ? <LoaderCircle size={18} className="animate-spin" /> : <Download size={18} />} {downloading ? '正在生成参考同款 Word…' : '导出参考同款 Word 简历'}
           </button>
           <p className="text-center text-[10px] leading-4 text-[#8a918b]">导出为 .docx，可在 Word / WPS 中继续编辑</p>
         </aside>
@@ -500,29 +521,40 @@ export default function Home() {
   const [jdText, setJdText] = useState('');
   const [optimizedText, setOptimizedText] = useState('');
   const [portfolioLink, setPortfolioLink] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [downloading, setDownloading] = useState(false);
   const scores = useMemo(() => calculateScores(resumeText, jdText), [resumeText, jdText]);
 
   const setResumeFile = async (file: File | null) => {
     setResumeFileState(file);
     if (!file) { setResumeText(''); return; }
-    setResumeProcessing({ label: '正在解析 PDF…', progress: 14 });
+    const isWord = /\.docx$/i.test(file.name) || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    setResumeProcessing({ label: isWord ? '正在解析 Word…' : '正在解析 PDF…', progress: 14 });
     try {
-      const pdfjs = await import('pdfjs-dist');
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
       const data = await file.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data }).promise;
-      const pages: string[] = [];
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-        setResumeProcessing({ label: `正在识别第 ${pageNumber} / ${pdf.numPages} 页`, progress: 15 + Math.round((pageNumber / pdf.numPages) * 75) });
-        const page = await pdf.getPage(pageNumber);
-        const content = await page.getTextContent();
-        pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' ').replace(/\s+/g, ' ').trim());
+      if (isWord) {
+        const mammoth = await import('mammoth');
+        setResumeProcessing({ label: '正在提取 Word 文字与段落…', progress: 58 });
+        const result = await mammoth.extractRawText({ arrayBuffer: data });
+        const extractedText = normalizeResumeTextForEditing(result.value);
+        if (!extractedText) throw new Error('Word 文档中没有可提取的文字');
+        setResumeText(extractedText);
+      } else {
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        const pdf = await pdfjs.getDocument({ data }).promise;
+        const pages: string[] = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          setResumeProcessing({ label: `正在识别第 ${pageNumber} / ${pdf.numPages} 页`, progress: 15 + Math.round((pageNumber / pdf.numPages) * 75) });
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' ').replace(/\s+/g, ' ').trim());
+        }
+        setResumeText(normalizeResumeTextForEditing(pages.join('\n\n')));
       }
-      setResumeText(pages.join('\n\n'));
       setResumeProcessing({ label: '解析完成', progress: 100 });
     } catch {
-      setResumeText('PDF 文本识别未完成。请在下一步粘贴或修改你的简历文字内容。');
+      setResumeText(`${isWord ? 'Word' : 'PDF'} 文本识别未完成。请在下一步粘贴或修改你的简历文字内容。`);
       setResumeProcessing({ label: '可手动校对', progress: 100 });
     } finally {
       window.setTimeout(() => setResumeProcessing(null), 450);
@@ -554,7 +586,7 @@ export default function Home() {
   };
 
   const reset = () => {
-    setPhase(0); setResumeFileState(null); setJdFileState(null); setResumeText(''); setJdText(''); setOptimizedText(''); setPortfolioLink(''); setResumeProcessing(null); setJdProcessing(null);
+    setPhase(0); setResumeFileState(null); setJdFileState(null); setResumeText(''); setJdText(''); setOptimizedText(''); setPortfolioLink(''); setPhotoFile(null); setResumeProcessing(null); setJdProcessing(null);
   };
 
   const loadSample = () => {
@@ -570,27 +602,15 @@ export default function Home() {
   const downloadWord = async () => {
     setDownloading(true);
     try {
-      const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = await import('docx');
-      const text = portfolioLink ? optimizedText.replace('[请填写可交互 Demo / 作品集链接]', portfolioLink) : optimizedText;
-      const sectionTitles = new Set(['求职方向', '核心优势', '教育经历', '实习经历', '项目经历', '技能', '作品链接', '求职匹配补充']);
-      const lines = text.split('\n');
-      const paragraphs = lines.map((line, index) => {
-        const trimmed = line.trim();
-        if (!trimmed) return new Paragraph({ spacing: { after: 80 } });
-        if (index === 0) return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: trimmed, bold: true, size: 32, color: '173F2F', font: 'Microsoft YaHei' })] });
-        if (index === 1 && /@|电话|138|139|邮箱/.test(trimmed)) return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, children: [new TextRun({ text: trimmed, size: 18, color: '607067', font: 'Microsoft YaHei' })] });
-        if (sectionTitles.has(trimmed)) return new Paragraph({ spacing: { before: 220, after: 100 }, border: { bottom: { color: '789080', style: BorderStyle.SINGLE, size: 8, space: 3 } }, children: [new TextRun({ text: trimmed, bold: true, size: 23, color: '173F2F', font: 'Microsoft YaHei' })] });
-        const bullet = /^[-•·]/.test(trimmed);
-        return new Paragraph({ bullet: bullet ? { level: 0 } : undefined, spacing: { after: 80, line: 300 }, children: [new TextRun({ text: bullet ? trimmed.replace(/^[-•·]\s*/, '') : trimmed, size: 19, color: '2F3E35', font: 'Microsoft YaHei' })] });
-      });
-      const doc = new Document({
-        styles: { default: { document: { run: { font: 'Microsoft YaHei', size: 19 }, paragraph: { spacing: { line: 300 } } } } },
-        sections: [{ properties: { page: { margin: { top: 720, right: 780, bottom: 720, left: 780 } } }, children: paragraphs }],
-      });
+      const [{ Packer }, { buildResumeDocument }] = await Promise.all([import('docx'), import('./resume-document')]);
+      const extension = photoFile?.name.split('.').pop()?.toLowerCase();
+      const photoType = extension === 'png' || extension === 'gif' || extension === 'bmp' ? extension : 'jpg';
+      const photo = photoFile ? { data: new Uint8Array(await photoFile.arrayBuffer()), type: photoType } : undefined;
+      const doc = buildResumeDocument(optimizedText, portfolioLink, photo);
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = '职跃_针对JD优化简历.docx'; anchor.click();
+      anchor.href = url; anchor.download = '职跃_参考同款蓝灰简历.docx'; anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally {
       setDownloading(false);
@@ -607,7 +627,7 @@ export default function Home() {
         {phase === 0 && <UploadPhase resumeFile={resumeFile} jdFile={jdFile} resumeProcessing={resumeProcessing} jdProcessing={jdProcessing} setResumeFile={setResumeFile} setJdFile={setJdFile} onContinue={() => setPhaseAndScroll(1)} onSample={loadSample} />}
         {phase === 1 && <ReviewPhase resumeText={resumeText} jdText={jdText} setResumeText={setResumeText} setJdText={setJdText} onBack={() => setPhaseAndScroll(0)} onAnalyze={() => setPhaseAndScroll(2)} />}
         {phase === 2 && <AnalysisPhase scores={scores} onBack={() => setPhaseAndScroll(1)} onOptimize={createOptimized} />}
-        {phase === 3 && <ExportPhase optimizedText={optimizedText} setOptimizedText={setOptimizedText} portfolioLink={portfolioLink} setPortfolioLink={setPortfolioLink} onBack={() => setPhaseAndScroll(2)} onDownload={downloadWord} downloading={downloading} />}
+        {phase === 3 && <ExportPhase optimizedText={optimizedText} setOptimizedText={setOptimizedText} portfolioLink={portfolioLink} setPortfolioLink={setPortfolioLink} photoFile={photoFile} setPhotoFile={setPhotoFile} onBack={() => setPhaseAndScroll(2)} onDownload={downloadWord} downloading={downloading} />}
       </div>
       <footer className="border-t border-[#d9ddd4] bg-[#ebeae4] px-5 py-6 text-center text-[10px] leading-5 text-[#7d857f] md:px-10">职跃 CareerPilot · 只优化真实经历的表达，不虚构项目、职责或数据 · 最终内容请由本人确认</footer>
     </main>
