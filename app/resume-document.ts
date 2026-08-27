@@ -16,7 +16,7 @@ import {
   VerticalAlign,
   WidthType,
 } from 'docx';
-import { isCompactPersonName, isResumeSectionTitle, normalizeResumeTextForEditing } from './resume-text.ts';
+import { isCompactPersonName, isResumeSectionTitle, normalizeResumeTextForEditing } from './resume-text';
 
 const COLORS = {
   slate: '879CB5',
@@ -252,7 +252,7 @@ function makePortfolio(line: string) {
   const url = line.match(/https?:\/\/\S+/i)?.[0];
   return new Paragraph({
     keepLines: true, border: { left: { style: BorderStyle.SINGLE, size: 16, color: COLORS.slate, space: 7 } }, shading: { type: ShadingType.CLEAR, fill: COLORS.pale, color: 'auto' }, indent: { left: 130, right: 80 }, spacing: { before: 25, after: 35, line: 245 },
-    children: url ? [new ExternalHyperlink({ link: url, children: [new TextRun({ text: url, color: COLORS.slateDark, underline: {}, bold: true, size: 18, font: 'Arial' })] })] : [new TextRun({ text: line, color: COLORS.muted, italic: true, size: 18, font: FONT })],
+    children: url ? [new ExternalHyperlink({ link: url, children: [new TextRun({ text: url, color: COLORS.slateDark, underline: {}, bold: true, size: 18, font: 'Arial' })] })] : [new TextRun({ text: line, color: COLORS.muted, italics: true, size: 18, font: FONT })],
   });
 }
 

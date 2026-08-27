@@ -224,7 +224,7 @@ function FileCard({
       className={`relative min-h-[274px] overflow-hidden rounded-[24px] border p-7 transition ${isResume ? 'border-[#ccd3cb] bg-[#fbfaf6] text-[#17231d]' : 'border-[#214b3a] bg-[#173f2f] text-white'} ${active ? 'ring-2 ring-[#b9dd65] ring-offset-2 ring-offset-[#f4f2eb]' : ''}`}
     >
       <input ref={inputRef} type="file" accept={accept} className="sr-only" onChange={(event) => pickFile(event.target.files?.[0])} />
-      {!active ? (
+      {!file ? (
         <button onClick={() => inputRef.current?.click()} className="flex h-full min-h-[218px] w-full flex-col text-left focus:outline-none">
           <div className="mb-auto flex w-full items-start justify-between">
             <span className={`grid h-12 w-12 place-items-center rounded-2xl ${isResume ? 'bg-[#e4ebdf] text-[#315542]' : 'bg-white/10 text-[#d9f28d]'}`}><UploadCloud size={23} /></span>
@@ -604,7 +604,7 @@ export default function Home() {
     try {
       const [{ Packer }, { buildResumeDocument }] = await Promise.all([import('docx'), import('./resume-document')]);
       const extension = photoFile?.name.split('.').pop()?.toLowerCase();
-      const photoType = extension === 'png' || extension === 'gif' || extension === 'bmp' ? extension : 'jpg';
+      const photoType: 'png' | 'gif' | 'bmp' | 'jpg' = extension === 'png' || extension === 'gif' || extension === 'bmp' ? extension : 'jpg';
       const photo = photoFile ? { data: new Uint8Array(await photoFile.arrayBuffer()), type: photoType } : undefined;
       const doc = buildResumeDocument(optimizedText, portfolioLink, photo);
       const blob = await Packer.toBlob(doc);
